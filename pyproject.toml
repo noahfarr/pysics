@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "pysics"
+version = "0.1.0"
+description = "A 2d physics simulation"
+authors = ["noah.farr <noah.farr@stud.tu-darmstadt.de>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1.25.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
