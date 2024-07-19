@@ -2,7 +2,6 @@ from time import sleep
 
 import numpy as np
 from tqdm import tqdm
-import pyray as pr
 
 from pysics.render import Renderer, RaylibRenderer
 from pysics.particle import Particle
@@ -15,34 +14,32 @@ class Simulation:
     renderer: Renderer
 
     WALL_DAMP: float
-    MAX_VELOCITY: float
-    VELOCITY_DAMP: float
 
     def __init__(
         self,
         n_particles: int,
         dt: float,
         renderer: Renderer,
-        gravity: float | None = None,
+        gravity: float = -9.81,
         WALL_DAMP: float = 0.95,
-        MAX_VELOCITY: float = 20.0,
-        VELOCITY_DAMP: float = 0.5,
+        RESTITUTION: float = 0.95,
     ) -> None:
         self.renderer = renderer
+
         self.n_particles = n_particles
         self.particles = self.generate_particles(self.n_particles)
+
         self.dt = dt
-        self.gravity = -9.91
+        self.gravity = gravity
         self.WALL_DAMP = WALL_DAMP
-        self.MAX_VELOCITY = MAX_VELOCITY
-        self.VELOCITY_DAMP = VELOCITY_DAMP
+        self.RESTITUTION = RESTITUTION
 
     def generate_particles(self, n_particles: int) -> list[Particle]:
         MIN_X, MIN_Y = 0, 0
         MAX_X, MAX_Y = self.renderer.size
 
         MIN_X_VEL, MIN_Y_VEL = 0, 0
-        MAX_X_VEL, MAX_Y_VEL = 50, 50
+        MAX_X_VEL, MAX_Y_VEL = 1000, 1000
 
         particles: list[Particle] = []
         for i in range(n_particles):
@@ -81,18 +78,29 @@ class Simulation:
 
     def step(self):
         for particle in self.particles:
-            particle.update(
-                self.dt, self.gravity, self.MAX_VELOCITY, self.VELOCITY_DAMP
-            )
+            particle.update(self.dt, self.gravity)
 
     def check_collision(self) -> list[tuple[Particle, Particle]]:
+
+        grid_size = 100
+        grid = {}
+
+        for particle in self.particles:
+            key: tuple[int, int] = (
+                particle.position[0] // grid_size,
+                particle.position[1] // grid_size,
+            )
+            if key not in grid:
+                grid[key] = []
+            grid[key].append(particle)
+
         collision_pairs = []
-        for i in range(self.n_particles):
-            particle = self.particles[i]
-            for j in range(i + 1, self.n_particles):
-                other = self.particles[j]
-                if particle.collides_with(other):
-                    collision_pairs.append((particle, other))
+        for cell_particles in grid.values():
+            for i, particle in enumerate(cell_particles):
+                for j in range(i + 1, len(cell_particles)):
+                    other = cell_particles[j]
+                    if particle.collides_with(other):
+                        collision_pairs.append((particle, other))
 
         return collision_pairs
 
@@ -109,8 +117,7 @@ class Simulation:
             if dv_along_normal > 0:
                 continue
 
-            restitution = 0.9
-            magnitude = -(1.0 + restitution) * dv_along_normal
+            magnitude = -(1.0 + self.RESTITUTION) * dv_along_normal
             magnitude /= (1 / particle.mass) + (1 / other.mass)
 
             impulse = normal * magnitude

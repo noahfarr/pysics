@@ -27,9 +27,7 @@ class Particle:
         self.velocity = velocity
         self.acceleration = acceleration
 
-    def update(
-        self, dt: float, gravity: float, MAX_VELOCITY: float, VELOCITY_DAMP: float
-    ) -> None:
+    def update(self, dt: float, gravity: float) -> None:
         self.acceleration = self.force / self.mass
         self.velocity += dt * self.acceleration
 
