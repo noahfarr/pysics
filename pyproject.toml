@@ -12,6 +12,8 @@ numpy = "^2.0.0"
 raylib = "^5.0.0.3"
 tqdm = "^4.66.4"
 tyro = "^0.8.5"
+cython = "^3.0.10"
+setuptools = "^71.0.4"
 
 
 [build-system]

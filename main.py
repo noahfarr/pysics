@@ -1,8 +1,10 @@
-import numpy as np
 import tyro
 
 from config import Config
-from pysics.simulation import Simulation
+
+# from pysics.simulation import Simulation
+# from pysics.render import Renderer, RaylibRenderer
+from simulation import Simulation
 from pysics.render import Renderer, RaylibRenderer
 
 

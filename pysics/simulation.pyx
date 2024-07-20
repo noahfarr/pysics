@@ -1,29 +1,33 @@
 from time import sleep
 
 import numpy as np
+cimport numpy as cnp
+cnp.import_array()
+
 from tqdm import tqdm
 
 from pysics.render import Renderer, RaylibRenderer
 
-# from pysics.particle import Particle
+from particle import Particle
 
+cdef class Simulation:
 
-class Simulation:
-
-    particles: list[Particle]
-    dt: float
-    renderer: Renderer
-
-    WALL_DAMP: float
+    cdef cnp.ndarray particles
+    cdef int n_particles
+    cdef double gravity
+    cdef double dt
+    cdef renderer
+    cdef double WALL_DAMP
+    cdef double RESTITUTION
 
     def __init__(
         self,
-        n_particles: int,
-        dt: float,
-        renderer: Renderer,
-        gravity: float = -9.81,
-        WALL_DAMP: float = 0.95,
-        RESTITUTION: float = 0.95,
+        int n_particles,
+        double dt,
+        renderer,
+        double gravity,
+        double WALL_DAMP,
+        double RESTITUTION,
     ) -> None:
         self.renderer = renderer
 
@@ -35,14 +39,21 @@ class Simulation:
         self.WALL_DAMP = WALL_DAMP
         self.RESTITUTION = RESTITUTION
 
-    def generate_particles(self, n_particles: int) -> list[Particle]:
-        MIN_X, MIN_Y = 0, 0
-        MAX_X, MAX_Y = self.renderer.size
+    cdef cnp.ndarray generate_particles(self, int n_particles):
+        cdef int MIN_X, MIN_Y, MAX_X, MAX_Y, MIN_X_VEL, MIN_Y_VEL, MAX_X_VEL, MAX_Y_VEL
+        cdef double x, y, x_vel, y_vel
+        cdef cnp.ndarray particles
+        MIN_X = 0
+        MIN_Y = 0
+        MAX_X = self.renderer.size[0]
+        MAX_Y = self.renderer.size[1]
 
-        MIN_X_VEL, MIN_Y_VEL = 0, 0
-        MAX_X_VEL, MAX_Y_VEL = 1000, 1000
+        MIN_X_VEL = 0
+        MIN_Y_VEL = 0
+        MAX_X_VEL = 500
+        MAX_Y_VEL = 500
 
-        particles: list[Particle] = []
+        particles = np.empty(n_particles, dtype=object)
         for i in range(n_particles):
             x = np.random.uniform(MIN_X, MAX_X)
             y = np.random.uniform(MIN_Y, MAX_Y)
@@ -50,18 +61,12 @@ class Simulation:
             x_vel = np.random.uniform(MIN_X_VEL, MAX_X_VEL)
             y_vel = np.random.uniform(MIN_Y_VEL, MAX_Y_VEL)
 
-            vx = np.random.uniform
-            particles.append(
-                Particle(
-                    force=np.array([0.0, 0.0]),
-                    position=np.array([x, y]),
-                    velocity=np.array([x_vel, y_vel]),
-                    acceleration=np.array([0.0, 0.0]),
-                )
-            )
+            particles[i] = Particle(1.0, 10.0, np.array([0.0, self.gravity]), np.array([x, y]), np.array([x_vel, y_vel]), np.array([0.0, 0.0]),)
+
         return particles
 
-    def simulate(self, total_timesteps: float, render: bool = False):
+    def simulate(self, double total_timesteps, bint render):
+        cdef list collision_pairs
 
         for timestep in tqdm(np.arange(0.0, total_timesteps, self.dt)):
             self.step()
@@ -73,31 +78,36 @@ class Simulation:
             if render:
                 self.renderer.render(self.particles)
 
-    def apply_force(self, force: np.ndarray):
-        for particle in self.particles:
-            particle.apply_force(force)
-
-    def step(self):
-        for particle in self.particles:
+    cdef step(self):
+        cdef particle
+        for i in range(self.n_particles):
+            particle = self.particles[i]
             particle.update(self.dt, self.gravity)
 
-    def check_collision(self) -> list[tuple[Particle, Particle]]:
+    cdef list check_collision(self):
+        cdef int grid_size
+        cdef dict grid
+        cdef tuple key
+        cdef list collision_pairs
 
         grid_size = 100
         grid = {}
 
-        for particle in self.particles:
-            key: tuple[int, int] = (
+        for i in range(self.n_particles):
+            particle = self.particles[i]
+            key = (
                 particle.position[0] // grid_size,
                 particle.position[1] // grid_size,
             )
+
             if key not in grid:
                 grid[key] = []
             grid[key].append(particle)
 
         collision_pairs = []
         for cell_particles in grid.values():
-            for i, particle in enumerate(cell_particles):
+            for i in range(len(cell_particles)):
+                particle = cell_particles[i]
                 for j in range(i + 1, len(cell_particles)):
                     other = cell_particles[j]
                     if particle.collides_with(other):
@@ -105,7 +115,10 @@ class Simulation:
 
         return collision_pairs
 
-    def resolve_collisions(self, collision_pairs: list[tuple[Particle, Particle]]):
+    cdef void resolve_collisions(self, list collision_pairs):
+        cdef cnp.ndarray direction, normal, dv, impulse
+        cdef double distance, dv_along_normal, magnitude
+
         for particle, other in collision_pairs:
             direction = other.position - particle.position
             distance = particle.distance_to(other)
@@ -125,9 +138,11 @@ class Simulation:
             particle.velocity -= (1 / particle.mass) * impulse
             other.velocity += (1 / other.mass) * impulse
 
-    def enforce_constraints(self):
+    cdef void enforce_constraints(self):
+        cdef double X_MIN, Y_MIN, X_MAX, Y_MAX, x, y
 
-        for particle in self.particles:
+        for i in range(self.n_particles):
+            particle = self.particles[i]
             X_MIN = 0
             Y_MIN = 0
             X_MAX, Y_MAX = self.renderer.size
