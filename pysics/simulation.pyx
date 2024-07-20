@@ -1,12 +1,8 @@
-from time import sleep
-
 import numpy as np
 cimport numpy as cnp
 cnp.import_array()
 
 from tqdm import tqdm
-
-from pysics.render import Renderer, RaylibRenderer
 
 from particle import Particle
 
@@ -50,8 +46,8 @@ cdef class Simulation:
 
         MIN_X_VEL = 0
         MIN_Y_VEL = 0
-        MAX_X_VEL = 500
-        MAX_Y_VEL = 500
+        MAX_X_VEL = 0
+        MAX_Y_VEL = 0
 
         particles = np.empty(n_particles, dtype=object)
         for i in range(n_particles):
@@ -90,7 +86,7 @@ cdef class Simulation:
         cdef tuple key
         cdef list collision_pairs
 
-        grid_size = 100
+        grid_size = 50
         grid = {}
 
         for i in range(self.n_particles):

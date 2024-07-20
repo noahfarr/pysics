@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import pyray as pr
 
-from pysics.particle import Particle
+from particle import Particle
 
 
 class Renderer(ABC):

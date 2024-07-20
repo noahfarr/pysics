@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class Config:
     n_particles: int = 500
     total_timesteps: int = 1000
-    dt: float = 0.01
+    dt: float = 0.1
     gravity: float = -9.81
     size: tuple[int, int] = (1200, 800)
     target_fps: int = 60
