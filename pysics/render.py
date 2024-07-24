@@ -1,15 +1,13 @@
 from abc import ABC, abstractmethod
 import pyray as pr
 
-from particle import Particle
-
 
 class Renderer(ABC):
 
     size: tuple[int, int]
 
     @abstractmethod
-    def render(self, particles: list[Particle]):
+    def render(self, x_positions, y_positions, radii):
         pass
 
     @abstractmethod
@@ -27,15 +25,15 @@ class RaylibRenderer(Renderer):
         pr.init_window(*self.size, "Pysics")
         pr.set_target_fps(self.target_fps)
 
-    def render(self, particles: list[Particle]):
+    def render(self, x_positions, y_positions, radii):
         pr.begin_drawing()
         pr.clear_background(pr.RAYWHITE)
 
         # Draw each circle from the list
-        for body in particles:
-            x = int(body.position[0])
-            y = self.size[1] - int((body.position[1]))
-            radius = int(body.radius)
+        for x, y, radius in zip(x_positions, y_positions, radii):
+            x = int(x)
+            y = int(y)
+            radius = int(radius)
             pr.draw_circle(x, y, radius, pr.DARKBLUE)
 
         # End drawing
